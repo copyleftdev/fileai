@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -121,12 +122,14 @@ func getSummaryFromAI(text string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("Debug Response:", string(bodyBytes)) // Debugging line
+
 	var res map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+	if err := json.Unmarshal(bodyBytes, &res); err != nil {
 		return "", err
 	}
 
-	// Check if choices exist and are in the correct format
 	choices, ok := res["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
 		return "", fmt.Errorf("invalid response format or empty choices")

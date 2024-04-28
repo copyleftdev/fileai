@@ -123,8 +123,6 @@ func getSummaryFromAI(text string) (string, error) {
 	defer resp.Body.Close()
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("Debug Response:", string(bodyBytes)) // Debugging line
-
 	var res map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
 		return "", err
@@ -140,19 +138,14 @@ func getSummaryFromAI(text string) (string, error) {
 		return "", fmt.Errorf("invalid format for first choice")
 	}
 
-	messages, ok := firstChoice["messages"].([]interface{})
-	if !ok || len(messages) == 0 {
-		return "", fmt.Errorf("invalid format for messages or empty messages")
+	message, ok := firstChoice["message"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid format for message")
 	}
 
-	lastMessage, ok := messages[len(messages)-1].(map[string]interface{})
+	description, ok := message["content"].(string)
 	if !ok {
-		return "", fmt.Errorf("invalid format for last message")
-	}
-
-	description, ok := lastMessage["content"].(string)
-	if !ok {
-		return "", fmt.Errorf("content missing from last message")
+		return "", fmt.Errorf("content missing from message")
 	}
 
 	return description, nil

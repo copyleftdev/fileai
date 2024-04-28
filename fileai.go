@@ -106,13 +106,15 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 						"text": "What’s in this image?",
 					},
 					map[string]interface{}{
-						"type":      "image_url",
-						"image_url": "data:image/jpeg;base64," + base64Image,
+						"type": "image_url",
+						"image_url": map[string]string{
+							"url": "data:image/jpeg;base64," + base64Image,
+						},
 					},
 				},
 			},
 		},
-		"max_tokens": 1000,
+		"max_tokens": 300,
 	}
 
 	requestBody, err := json.Marshal(payload)
@@ -148,7 +150,6 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		return "", fmt.Errorf("error unmarshalling response: %v", err)
 	}
 
-	// Parsing the response
 	choices, ok := res["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
 		return "", fmt.Errorf("invalid response format or empty choices")

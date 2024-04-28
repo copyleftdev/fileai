@@ -1,100 +1,100 @@
 package api
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "io/ioutil"
-    "net/http"
-    "os"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
 )
 
 // API endpoints for different models
 const (
-    textModelURL = "https://api.openai.com/v1/engines/gpt-4-1106-preview/completions"
-    imageModelURL = "https://api.openai.com/v1/engines/gpt-4-vision-preview/completions"
+	textModelURL  = "https://api.openai.com/v1/engines/gpt-4-1106-preview/completions"
+	imageModelURL = "https://api.openai.com/v1/engines/gpt-4-vision-preview/completions"
 )
 
 // OpenAIRequest defines the structure for an API request
 type OpenAIRequest struct {
-    Prompt    string `json:"prompt"`
-    MaxTokens int    `json:"max_tokens"`
+	Prompt    string `json:"prompt"`
+	MaxTokens int    `json:"max_tokens"`
 }
 
 // OpenAIResponse defines the structure for an API response
 type OpenAIResponse struct {
-    Choices []struct {
-        Text string `json:"text"`
-    } `json:"choices"`
-    Error *OpenAIError `json:"error"`
+	Choices []struct {
+		Text string `json:"text"`
+	} `json:"choices"`
+	Error *OpenAIError `json:"error"`
 }
 
 // OpenAIError defines the structure for an error response from OpenAI
 type OpenAIError struct {
-    Message string `json:"message"`
-    Type    string `json:"type"`
-    Param   string `json:"param,omitempty"`
-    Code    string `json:"code,omitempty"`
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Param   string `json:"param,omitempty"`
+	Code    string `json:"code,omitempty"`
 }
 
 // SummarizeText sends text to the OpenAI API for summarization using the text model
 func SummarizeText(text, prompt string) (string, error) {
-    return callOpenAI(text, prompt, 150, textModelURL) // Adjust max tokens as necessary
+	return callOpenAI(text, prompt, 150, textModelURL) // Adjust max tokens as necessary
 }
 
 // DescribeImage sends an image description request to the OpenAI API using the image model
 func DescribeImage(imagePath, prompt string) (string, error) {
-    return callOpenAI(imagePath, prompt, 150, imageModelURL) // Adjust max tokens as necessary
+	return callOpenAI(imagePath, prompt, 150, imageModelURL) // Adjust max tokens as necessary
 }
 
 // callOpenAI handles the common functionality of calling the OpenAI API
 func callOpenAI(input, prompt string, maxTokens int, modelURL string) (string, error) {
-    requestData := OpenAIRequest{
-        Prompt:    prompt + "\n\n" + input, // Combine prompt with input
-        MaxTokens: maxTokens,
-    }
+	requestData := OpenAIRequest{
+		Prompt:    prompt + "\n\n" + input, // Combine prompt with input
+		MaxTokens: maxTokens,
+	}
 
-    requestBody, err := json.Marshal(requestData)
-    if err != nil {
-        return "", fmt.Errorf("error marshalling request: %v", err)
-    }
+	requestBody, err := json.Marshal(requestData)
+	if err != nil {
+		return "", fmt.Errorf("error marshalling request: %v", err)
+	}
 
-    req, err := http.NewRequest("POST", modelURL, bytes.NewBuffer(requestBody))
-    if err != nil {
-        return "", fmt.Errorf("error creating request: %v", err)
-    }
+	req, err := http.NewRequest("POST", modelURL, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
 
-    apiKey := os.Getenv("OPENAI_API_KEY")
-    if apiKey == "" {
-        return "", fmt.Errorf("OpenAI API key is not set")
-    }
-    req.Header.Add("Authorization", "Bearer " + apiKey)
-    req.Header.Add("Content-Type", "application/json")
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		return "", fmt.Errorf("OpenAI API key is not set")
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+	req.Header.Add("Content-Type", "application/json")
 
-    client := &http.Client{}
-    resp, err := client.Do(req)
-    if err != nil {
-        return "", fmt.Errorf("error sending request to OpenAI: %v", err)
-    }
-    defer resp.Body.Close()
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error sending request to OpenAI: %v", err)
+	}
+	defer resp.Body.Close()
 
-    respBody, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return "", fmt.Errorf("error reading response body: %v", err)
-    }
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %v", err)
+	}
 
-    var apiResp OpenAIResponse
-    if err := json.Unmarshal(respBody, &apiResp); err != nil {
-        return "", fmt.Errorf("error unmarshalling response from OpenAI: %v", err)
-    }
+	var apiResp OpenAIResponse
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return "", fmt.Errorf("error unmarshalling response from OpenAI: %v", err)
+	}
 
-    if apiResp.Error != nil {
-        return "", fmt.Errorf("error from OpenAI: %s", apiResp.Error.Message)
-    }
+	if apiResp.Error != nil {
+		return "", fmt.Errorf("error from OpenAI: %s", apiResp.Error.Message)
+	}
 
-    if len(apiResp.Choices) > 0 {
-        return apiResp.Choices[0].Text, nil
-    }
+	if len(apiResp.Choices) > 0 {
+		return apiResp.Choices[0].Text, nil
+	}
 
-    return "", fmt.Errorf("no response from OpenAI")
+	return "", fmt.Errorf("no response from OpenAI")
 }

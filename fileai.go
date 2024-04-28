@@ -108,7 +108,7 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 				},
 			},
 		},
-		"max_tokens": 300, // Ensure you have the right parameters according to your API needs
+		"max_tokens": 300,
 	}
 
 	requestBody, err := json.Marshal(payload)
@@ -116,7 +116,6 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		return "", fmt.Errorf("error marshalling request: %v", err)
 	}
 
-	// Create the HTTP request using the NewRequest function
 	req, err := http.NewRequest("POST", openAIURL, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
@@ -125,7 +124,6 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", authToken)
 
-	// Create an HTTP client and use it to send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -133,11 +131,13 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	// Read and handle the response body
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
+
+	// Print the raw response body for debugging
+	fmt.Println("DEBUG - Raw Response:", string(bodyBytes))
 
 	var res map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {

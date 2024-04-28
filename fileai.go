@@ -140,8 +140,7 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
 
-	// Debugging output
-	fmt.Println("DEBUG - Raw Response:", string(bodyBytes))
+	fmt.Println("DEBUG - Raw Response:", string(bodyBytes)) // For debugging
 
 	var res map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
@@ -169,15 +168,6 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 	}
 
 	return description, nil
-}
-
-func isImage(ext string) bool {
-	// Check if the file extension indicates an image
-	switch strings.ToLower(ext) {
-	case ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff":
-		return true
-	}
-	return false
 }
 
 func isHumanReadable(content []byte) bool {

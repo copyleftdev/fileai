@@ -170,6 +170,15 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 	return description, nil
 }
 
+func isImage(ext string) bool {
+	// Check if the file extension indicates an image
+	switch strings.ToLower(ext) {
+	case ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff":
+		return true
+	}
+	return false
+}
+
 func isHumanReadable(content []byte) bool {
 	// First, attempt to detect based on MIME type
 	kind, err := filetype.Match(content)

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 )
@@ -39,7 +39,7 @@ type OpenAIError struct {
 
 // Function to handle text analysis using the Chat API
 func AnalyzeText(input string) (string, error) {
-	return callOpenAI("gpt-4-1106-preview", []Message{
+	return callOpenAI("gpt-4-turbo", []Message{
 		{Role: "system", Content: "You are a helpful assistant."},
 		{Role: "user", Content: input},
 	})
@@ -47,7 +47,7 @@ func AnalyzeText(input string) (string, error) {
 
 // Function to handle image description using the Chat API
 func DescribeImage(base64Image string) (string, error) {
-	return callOpenAI("gpt-4-vision-preview", []Message{
+	return callOpenAI("gpt-4-turbo", []Message{
 		{Role: "user", Content: fmt.Sprintf("[image data:image/jpeg;base64,%s]", base64Image)},
 	})
 }
@@ -80,7 +80,7 @@ func callOpenAI(model string, messages []Message) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}

@@ -18,6 +18,7 @@ import (
 const (
 	openAIURL   = "https://api.openai.com/v1/chat/completions"
 	contentType = "application/json"
+	maxTokens   = 128000 // Max tokens for your selected model
 )
 
 type OpenAIRequest struct {
@@ -62,7 +63,7 @@ func runFaileai(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	if isHumanReadable(content) {
+	if isHumanReadable(content) && AccurateTokenCount(string(content)) <= maxTokens {
 		description, err := getSummaryFromAI(string(content))
 		if err != nil {
 			fmt.Printf("Error getting summary from AI: %v\n", err)
@@ -142,7 +143,6 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
 
-	// Debugging output to see raw response
 	fmt.Println("DEBUG - Raw Response:", string(bodyBytes))
 
 	var res map[string]interface{}
@@ -175,21 +175,14 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 
 func isImage(ext string) bool {
 	// Check if the file extension indicates an image
-	switch strings.ToLower(ext) {
-	case ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff":
-		return true
-	}
-	return false
+	return strings.ToLower(ext) == ".jpg" || strings.ToLower(ext) == ".jpeg" || strings.ToLower(ext) == ".png" || strings.ToLower(ext) == ".gif" || strings.ToLower(ext) == ".bmp" || strings.ToLower(ext) == ".tiff"
 }
 
 func isHumanReadable(content []byte) bool {
-	// First, attempt to detect based on MIME type
 	kind, err := filetype.Match(content)
 	if err == nil && kind != filetype.Unknown {
 		return kind.MIME.Type == "text" || strings.HasPrefix(kind.MIME.Value, "application/json") || strings.HasPrefix(kind.MIME.Value, "application/xml")
 	}
-
-	// If MIME type is unknown or detection failed, check content characteristics
 	return isLikelyText(content)
 }
 
@@ -199,18 +192,14 @@ func isLikelyText(data []byte) bool {
 	if limit > sampleSize {
 		limit = sampleSize
 	}
-
 	textCount := 0
 	for _, b := range data[:limit] {
 		if b == '\n' || b == '\r' || b == '\t' || b >= ' ' && b <= '~' { // printable characters and common whitespace
 			textCount++
 		}
 	}
-
-	// Consider it text if more than 90% of the sample is text-like characters
 	return textCount >= int(0.9*float64(limit))
 }
-
 func getSummaryFromAI(text string) (string, error) {
 	authToken := fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY"))
 	if authToken == "Bearer " {
@@ -218,7 +207,7 @@ func getSummaryFromAI(text string) (string, error) {
 	}
 
 	requestData := OpenAIRequest{
-		Model: "gpt-4",
+		Model: "gpt-4-1106-preview",
 		Messages: []Message{
 			{"system", "You are a helpful assistant."},
 			{"user", "Summarize this content"},
@@ -229,7 +218,7 @@ func getSummaryFromAI(text string) (string, error) {
 
 	req, err := http.NewRequest("POST", openAIURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error creating request: %v", err)
 	}
 
 	req.Header.Set("Content-Type", contentType)
@@ -238,14 +227,18 @@ func getSummaryFromAI(text string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error sending request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, _ := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %v", err)
+	}
+
 	var res map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
-		return "", err
+		return "", fmt.Errorf("error unmarshalling response: %v", err)
 	}
 
 	choices, ok := res["choices"].([]interface{})
@@ -269,4 +262,9 @@ func getSummaryFromAI(text string) (string, error) {
 	}
 
 	return description, nil
+}
+
+func AccurateTokenCount(text string) int {
+	// More accurate token estimation considering spaces and some punctuation
+	return strings.Count(text, " ") + strings.Count(text, ".") + strings.Count(text, ",") + strings.Count(text, ";") + strings.Count(text, ":") + 1
 }

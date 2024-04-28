@@ -95,8 +95,6 @@ func runFaileai(cmd *cobra.Command, args []string) {
 
 func getDescriptionOfImage(base64Image string) (string, error) {
 	authToken := fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY"))
-	imageUrl := "data:image/jpeg;base64," + base64Image // Correctly format as data URL
-
 	payload := map[string]interface{}{
 		"model": "gpt-4-turbo",
 		"messages": []map[string]interface{}{
@@ -109,12 +107,12 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 					},
 					map[string]interface{}{
 						"type":      "image_url",
-						"image_url": imageUrl,
+						"image_url": "data:image/jpeg;base64," + base64Image,
 					},
 				},
 			},
 		},
-		"max_tokens": 300,
+		"max_tokens": 1000,
 	}
 
 	requestBody, err := json.Marshal(payload)
@@ -142,13 +140,15 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
 
-	fmt.Println("DEBUG - Raw Response:", string(bodyBytes)) // For debugging
+	// Debugging output to see raw response
+	fmt.Println("DEBUG - Raw Response:", string(bodyBytes))
 
 	var res map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
 		return "", fmt.Errorf("error unmarshalling response: %v", err)
 	}
 
+	// Parsing the response
 	choices, ok := res["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
 		return "", fmt.Errorf("invalid response format or empty choices")

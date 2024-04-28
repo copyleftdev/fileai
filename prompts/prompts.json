@@ -1,0 +1,11 @@
+{
+    "prompts": {
+      "text": {
+        "summary": "Please summarize this content."
+      },
+      "image": {
+        "description": "Please describe what’s in this image."
+      }
+    }
+  }
+  

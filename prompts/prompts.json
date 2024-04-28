@@ -1,11 +1,10 @@
 {
-    "prompts": {
-      "text": {
-        "summary": "Please summarize this content."
-      },
-      "image": {
-        "description": "Please describe what’s in this image."
-      }
+  "prompts": {
+    "text": {
+      "summary": "Please summarize this content and provide a JSON object with 'summary' and a list of 'tags' capturing the essence of the summary."
+    },
+    "image": {
+      "description": "Please describe what’s in this image and provide a JSON object with 'description' and a list of 'tags' capturing the essence of the description."
     }
   }
-  
+}

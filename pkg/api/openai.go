@@ -9,19 +9,16 @@ import (
 	"os"
 )
 
-// Define a struct for each message within the messages array
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// Define the request structure to include an array of messages
 type OpenAIRequest struct {
 	Model    string    `json:"model"`
 	Messages []Message `json:"messages"`
 }
 
-// Response and Error handling structures remain the same as your needs
 type OpenAIResponse struct {
 	Choices []struct {
 		Message struct {
@@ -39,20 +36,19 @@ type OpenAIError struct {
 
 // Function to handle text analysis using the Chat API
 func AnalyzeText(input string) (string, error) {
-	return callOpenAI("gpt-4-turbo", []Message{
-		{Role: "system", Content: "You are a helpful assistant."},
+	return callOpenAI("gpt-4", []Message{
+		{Role: "system", Content: "You are a helpful assistant. Return a JSON object with a 'summary' and 'tags'."},
 		{Role: "user", Content: input},
 	})
 }
 
 // Function to handle image description using the Chat API
 func DescribeImage(base64Image string) (string, error) {
-	return callOpenAI("gpt-4-turbo", []Message{
-		{Role: "user", Content: fmt.Sprintf("[image data:image/jpeg;base64,%s]", base64Image)},
+	return callOpenAI("gpt-4", []Message{
+		{Role: "user", Content: fmt.Sprintf("Describe this image and return a JSON object with 'description' and 'tags': [image data:image/jpeg;base64,%s]", base64Image)},
 	})
 }
 
-// callOpenAI sends requests to the OpenAI API
 func callOpenAI(model string, messages []Message) (string, error) {
 	requestData := OpenAIRequest{
 		Model:    model,

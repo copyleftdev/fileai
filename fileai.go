@@ -95,6 +95,8 @@ func runFaileai(cmd *cobra.Command, args []string) {
 
 func getDescriptionOfImage(base64Image string) (string, error) {
 	authToken := fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY"))
+	imageUrl := "data:image/jpeg;base64," + base64Image // Correctly format as data URL
+
 	payload := map[string]interface{}{
 		"model": "gpt-4-turbo",
 		"messages": []map[string]interface{}{
@@ -106,8 +108,8 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 						"text": "What’s in this image?",
 					},
 					map[string]interface{}{
-						"type": "image",
-						"data": base64Image,
+						"type":      "image_url",
+						"image_url": imageUrl,
 					},
 				},
 			},

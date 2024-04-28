@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	"fileai/config"
 	"fileai/pkg/api"
 	"fileai/pkg/file"
 	"fmt"
@@ -16,11 +15,16 @@ func AnalyzeFile(filePath string) (string, error) {
 
 	if file.IsHumanReadable(content) {
 		textContent := string(content)
-		prompt := config.AppConfig.Prompts["text"].Summary
-		return api.SummarizeText(textContent, prompt)
+		// Call the appropriate function without passing the prompt directly
+		return api.AnalyzeText(textContent)
 	} else if file.IsImage(filePath) {
-		prompt := config.AppConfig.Prompts["image"].Description
-		return api.DescribeImage(filePath, prompt)
+		// Assume content is base64-encoded image data for this example; adjust as needed
+		base64Image, err := file.EncodeToBase64(filePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode image: %v", err)
+		}
+		// Call the appropriate function without a prompt as the second argument
+		return api.DescribeImage(base64Image)
 	}
 
 	return "", fmt.Errorf("unsupported file type")

@@ -4,54 +4,59 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 )
 
-// API endpoints for different models
-const (
-	textModelURL  = "https://api.openai.com/v1/engines/gpt-4-1106-preview/completions"
-	imageModelURL = "https://api.openai.com/v1/engines/gpt-4-vision-preview/completions"
-)
-
-// OpenAIRequest defines the structure for an API request
-type OpenAIRequest struct {
-	Prompt    string `json:"prompt"`
-	MaxTokens int    `json:"max_tokens"`
+// Define a struct for each message within the messages array
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
-// OpenAIResponse defines the structure for an API response
+// Define the request structure to include an array of messages
+type OpenAIRequest struct {
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+}
+
+// Response and Error handling structures remain the same as your needs
 type OpenAIResponse struct {
 	Choices []struct {
-		Text string `json:"text"`
+		Message struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"message"`
 	} `json:"choices"`
 	Error *OpenAIError `json:"error"`
 }
 
-// OpenAIError defines the structure for an error response from OpenAI
 type OpenAIError struct {
 	Message string `json:"message"`
 	Type    string `json:"type"`
-	Param   string `json:"param,omitempty"`
-	Code    string `json:"code,omitempty"`
 }
 
-// SummarizeText sends text to the OpenAI API for summarization using the text model
-func SummarizeText(text, prompt string) (string, error) {
-	return callOpenAI(text, prompt, 150, textModelURL) // Adjust max tokens as necessary
+// Function to handle text analysis using the Chat API
+func AnalyzeText(input string) (string, error) {
+	return callOpenAI("gpt-4-1106-preview", []Message{
+		{Role: "system", Content: "You are a helpful assistant."},
+		{Role: "user", Content: input},
+	})
 }
 
-// DescribeImage sends an image description request to the OpenAI API using the image model
-func DescribeImage(imagePath, prompt string) (string, error) {
-	return callOpenAI(imagePath, prompt, 150, imageModelURL) // Adjust max tokens as necessary
+// Function to handle image description using the Chat API
+func DescribeImage(base64Image string) (string, error) {
+	return callOpenAI("gpt-4-vision-preview", []Message{
+		{Role: "user", Content: fmt.Sprintf("[image data:image/jpeg;base64,%s]", base64Image)},
+	})
 }
 
-// callOpenAI handles the common functionality of calling the OpenAI API
-func callOpenAI(input, prompt string, maxTokens int, modelURL string) (string, error) {
+// callOpenAI sends requests to the OpenAI API
+func callOpenAI(model string, messages []Message) (string, error) {
 	requestData := OpenAIRequest{
-		Prompt:    prompt + "\n\n" + input, // Combine prompt with input
-		MaxTokens: maxTokens,
+		Model:    model,
+		Messages: messages,
 	}
 
 	requestBody, err := json.Marshal(requestData)
@@ -59,15 +64,12 @@ func callOpenAI(input, prompt string, maxTokens int, modelURL string) (string, e
 		return "", fmt.Errorf("error marshalling request: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", modelURL, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(requestBody))
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		return "", fmt.Errorf("OpenAI API key is not set")
-	}
 	req.Header.Add("Authorization", "Bearer "+apiKey)
 	req.Header.Add("Content-Type", "application/json")
 
@@ -78,7 +80,7 @@ func callOpenAI(input, prompt string, maxTokens int, modelURL string) (string, e
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
@@ -93,7 +95,7 @@ func callOpenAI(input, prompt string, maxTokens int, modelURL string) (string, e
 	}
 
 	if len(apiResp.Choices) > 0 {
-		return apiResp.Choices[0].Text, nil
+		return apiResp.Choices[0].Message.Content, nil
 	}
 
 	return "", fmt.Errorf("no response from OpenAI")

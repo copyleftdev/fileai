@@ -1,10 +1,19 @@
 package file
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+func EncodeToBase64(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
 
 // ReadFile reads the content of the given file path and returns it as a byte slice.
 func ReadFile(filePath string) ([]byte, error) {

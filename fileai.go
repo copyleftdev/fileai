@@ -74,21 +74,32 @@ func runFaileai(cmd *cobra.Command, args []string) {
 }
 
 func isHumanReadable(content []byte) bool {
+	// First, attempt to detect based on MIME type
 	kind, err := filetype.Match(content)
-	if err != nil || kind == filetype.Unknown {
-		// Assume text if the filetype is unknown and content is not empty
-		return len(content) > 0 && isText(content)
+	if err == nil && kind != filetype.Unknown {
+		return kind.MIME.Type == "text" || strings.HasPrefix(kind.MIME.Value, "application/json") || strings.HasPrefix(kind.MIME.Value, "application/xml")
 	}
-	return kind.MIME.Type == "text" || strings.HasPrefix(kind.MIME.Value, "application/json") || strings.HasPrefix(kind.MIME.Value, "application/xml")
+
+	// If MIME type is unknown or detection failed, check content characteristics
+	return isLikelyText(content)
 }
 
-func isText(data []byte) bool {
-	for _, b := range data {
-		if b != 0x09 && b != 0x0A && b != 0x0D && (b < 0x20 || b > 0x7E) {
-			return false
+func isLikelyText(data []byte) bool {
+	const sampleSize = 512 // Check the first 512 bytes, or the full content if smaller
+	limit := len(data)
+	if limit > sampleSize {
+		limit = sampleSize
+	}
+
+	textCount := 0
+	for _, b := range data[:limit] {
+		if b == '\n' || b == '\r' || b == '\t' || b >= ' ' && b <= '~' { // printable characters and common whitespace
+			textCount++
 		}
 	}
-	return true
+
+	// Consider it text if more than 90% of the sample is text-like characters
+	return textCount >= int(0.9*float64(limit))
 }
 
 func getSummaryFromAI(text string) (string, error) {

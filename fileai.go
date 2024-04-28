@@ -100,10 +100,14 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		"messages": []map[string]interface{}{
 			{
 				"role": "user",
-				"content": map[string]interface{}{
-					"type": "image_url",
-					"image_url": map[string]string{
-						"url": "data:image/jpeg;base64," + base64Image,
+				"content": []map[string]interface{}{
+					{
+						"type": "text",
+						"text": "What’s in this image?",
+					},
+					{
+						"type": "image",
+						"data": base64Image,
 					},
 				},
 			},
@@ -136,7 +140,6 @@ func getDescriptionOfImage(base64Image string) (string, error) {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
 
-	// Print the raw response body for debugging
 	fmt.Println("DEBUG - Raw Response:", string(bodyBytes))
 
 	var res map[string]interface{}

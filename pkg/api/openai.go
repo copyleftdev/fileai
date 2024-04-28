@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 )
 
 // OpenAI API endpoint
-const openAIURL = "https://api.openai.com/v1/engines"
+const openAIURL = "https://api.openai.com/v1/engines/davinci-codex/completions"
 
 // OpenAIRequest defines the structure for an API request
 type OpenAIRequest struct {
@@ -23,7 +23,15 @@ type OpenAIResponse struct {
 	Choices []struct {
 		Text string `json:"text"`
 	} `json:"choices"`
-	Error string `json:"error"`
+	Error *OpenAIError `json:"error"` // Use a pointer to an OpenAIError struct
+}
+
+// OpenAIError defines the structure for an error response from OpenAI
+type OpenAIError struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Param   string `json:"param,omitempty"`
+	Code    string `json:"code,omitempty"`
 }
 
 // SummarizeText sends text to the OpenAI API for summarization
@@ -67,7 +75,7 @@ func callOpenAI(input, prompt string, maxTokens int) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
@@ -77,8 +85,8 @@ func callOpenAI(input, prompt string, maxTokens int) (string, error) {
 		return "", fmt.Errorf("error unmarshalling response from OpenAI: %v", err)
 	}
 
-	if apiResp.Error != "" {
-		return "", fmt.Errorf("error from OpenAI: %s", apiResp.Error)
+	if apiResp.Error != nil {
+		return "", fmt.Errorf("error from OpenAI: %s", apiResp.Error.Message)
 	}
 
 	if len(apiResp.Choices) > 0 {

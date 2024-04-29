@@ -5,13 +5,17 @@ import (
 	"encoding/base64"
 	"image"
 	"image/jpeg"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/nfnt/resize"
 )
 
+// EncodeToBase64 encodes an image file at the specified path to a base64 string after resizing it.
 func EncodeToBase64(filePath string) (string, error) {
 	imgFile, err := os.Open(filePath)
 	if err != nil {
@@ -19,46 +23,38 @@ func EncodeToBase64(filePath string) (string, error) {
 	}
 	defer imgFile.Close()
 
-	// Decode the image.
 	img, _, err := image.Decode(imgFile)
 	if err != nil {
 		return "", err
 	}
 
-	// Resize to a new width while maintaining the aspect ratio.
 	newImage := resize.Resize(800, 0, img, resize.Lanczos3)
 
-	// Encode the resized image to jpeg format.
 	buf := new(bytes.Buffer)
-	err = jpeg.Encode(buf, newImage, &jpeg.Options{Quality: 80}) // Reduce quality to reduce file size
-	if err != nil {
+	if err := jpeg.Encode(buf, newImage, &jpeg.Options{Quality: 80}); err != nil {
 		return "", err
 	}
 
-	// Convert to base64.
-	base64Image := base64.StdEncoding.EncodeToString(buf.Bytes())
-	return base64Image, nil
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// ReadFile reads the content of the given file path and returns it as a byte slice.
+// ReadFile reads the content of a file and returns it as a byte slice.
 func ReadFile(filePath string) ([]byte, error) {
+	return ioutil.ReadFile(filePath)
+}
+
+// IsHumanReadable checks if the file content is likely to be text based on its MIME type and content analysis.
+func IsHumanReadable(filePath string) bool {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return false
 	}
-	return content, nil
-}
-
-// IsHumanReadable checks if the file content is likely to be text based on its MIME type.
-func IsHumanReadable(content []byte) bool {
-	// You might use a third-party library to check the MIME type or use a simple heuristic based on content.
-	return isText(content)
+	return isText(content) && isPrintableText(content)
 }
 
 // IsImage checks if the file extension indicates an image.
 func IsImage(filePath string) bool {
-	ext := strings.ToLower(filepath.Ext(filePath))
-	switch ext {
+	switch strings.ToLower(filepath.Ext(filePath)) {
 	case ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff":
 		return true
 	default:
@@ -66,13 +62,20 @@ func IsImage(filePath string) bool {
 	}
 }
 
-// isText attempts to determine if content is text by checking for non-text byte patterns.
+// isText determines if the content's MIME type is textual.
 func isText(data []byte) bool {
-	// Simple heuristic: Check if most bytes are printable characters or common text-related control characters.
+	// Only read the first 512 bytes to determine the content type.
+	mimeType := http.DetectContentType(data[:512])
+	return strings.HasPrefix(mimeType, "text") || strings.Contains(mimeType, "charset=utf-8")
+}
+
+// isPrintableText checks if a significant portion of the content consists of printable characters.
+func isPrintableText(data []byte) bool {
+	printableCount := 0
 	for _, b := range data {
-		if b != '\n' && b != '\r' && b != '\t' && (b < 32 || b > 127) {
-			return false
+		if unicode.IsPrint(rune(b)) || unicode.IsSpace(rune(b)) {
+			printableCount++
 		}
 	}
-	return true
+	return float64(printableCount)/float64(len(data)) > 0.9 // At least 90% of characters should be printable.
 }

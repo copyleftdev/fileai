@@ -36,7 +36,7 @@ type OpenAIError struct {
 
 // Function to handle text analysis using the Chat API
 func AnalyzeText(input string) (string, error) {
-	return callOpenAI("gpt-4", []Message{
+	return callOpenAI("gpt-4-turbo-2024-04-09", []Message{
 		{Role: "system", Content: "You are a helpful assistant. Return a JSON object with a 'summary' and 'tags'."},
 		{Role: "user", Content: input},
 	})
@@ -44,7 +44,7 @@ func AnalyzeText(input string) (string, error) {
 
 // Function to handle image description using the Chat API
 func DescribeImage(base64Image string) (string, error) {
-	return callOpenAI("gpt-4", []Message{
+	return callOpenAI("gpt-4-turbo-2024-04-09", []Message{
 		{Role: "user", Content: fmt.Sprintf("Describe this image and return a JSON object with 'description' and 'tags': [image data:image/jpeg;base64,%s]", base64Image)},
 	})
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"image"
 	"image/jpeg"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,7 +14,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-// EncodeToBase64 encodes an image file to a base64 string after resizing it.
+// EncodeToBase64 encodes an image file at the specified path to a base64 string after resizing it.
 func EncodeToBase64(filePath string) (string, error) {
 	imgFile, err := os.Open(filePath)
 	if err != nil {
@@ -31,21 +30,21 @@ func EncodeToBase64(filePath string) (string, error) {
 	newImage := resize.Resize(800, 0, img, resize.Lanczos3)
 
 	buf := new(bytes.Buffer)
-	if err = jpeg.Encode(buf, newImage, &jpeg.Options{Quality: 80}); err != nil {
+	if err := jpeg.Encode(buf, newImage, &jpeg.Options{Quality: 80}); err != nil {
 		return "", err
 	}
 
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// ReadFile reads the content of the given file path and returns it as a byte slice.
+// ReadFile reads the content of a file and returns it as a byte slice.
 func ReadFile(filePath string) ([]byte, error) {
-	return ioutil.ReadFile(filePath)
+	return os.ReadFile(filePath)
 }
 
-// IsHumanReadable checks if the file content is likely to be text based on MIME type analysis.
+// IsHumanReadable checks if the file content is likely to be text based on its MIME type and content analysis.
 func IsHumanReadable(filePath string) bool {
-	content, err := ioutil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return false
 	}
@@ -64,6 +63,7 @@ func IsImage(filePath string) bool {
 
 // isText determines if the content's MIME type is textual.
 func isText(data []byte) bool {
+	// Only read the first 512 bytes to determine the content type.
 	mimeType := http.DetectContentType(data[:512])
 	return strings.HasPrefix(mimeType, "text") || strings.Contains(mimeType, "charset=utf-8")
 }
@@ -76,5 +76,5 @@ func isPrintableText(data []byte) bool {
 			printableCount++
 		}
 	}
-	return float64(printableCount)/float64(len(data)) > 0.9
+	return float64(printableCount)/float64(len(data)) > 0.9 // At least 90% of characters should be printable.
 }
